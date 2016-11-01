@@ -3,7 +3,7 @@ package org.mockitousage.debugging;
 import org.junit.Test;
 import org.mockito.internal.progress.MockingProgress;
 import org.mockito.internal.progress.ThreadSafeMockingProgress;
-import org.mockito.internal.verification.api.VerificationData;
+import org.mockito.verification.VerificationData;
 import org.mockito.listeners.VerificationListener;
 import org.mockito.verification.VerificationMode;
 import org.mockito.verification.VerificationSucceededEvent;

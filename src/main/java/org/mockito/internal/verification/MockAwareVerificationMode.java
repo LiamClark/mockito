@@ -5,7 +5,7 @@
 package org.mockito.internal.verification;
 
 import java.util.Set;
-import org.mockito.internal.verification.api.VerificationData;
+import org.mockito.verification.VerificationData;
 import org.mockito.listeners.VerificationListener;
 import org.mockito.verification.VerificationMode;
 import org.mockito.verification.VerificationSucceededEvent;

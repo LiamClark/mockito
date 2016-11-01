@@ -1,6 +1,7 @@
 package org.mockito.listeners;
 
 import org.mockito.verification.VerificationData;
+import org.mockito.verification.VerificationMode;
 import org.mockito.verification.VerificationSucceededEvent;
 
 /**
@@ -18,4 +19,6 @@ public interface VerificationListener extends MockitoListener {
      *                                   and the {@link VerificationData}
      */
     void onVerificationSucceeded(VerificationSucceededEvent verificationSucceededEvent);
+
+    void onVerificationException(Object mock, VerificationMode actualMode, Throwable failure);
 }

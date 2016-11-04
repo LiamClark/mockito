@@ -1,5 +1,7 @@
 package org.mockito.verification;
 
+import org.mockito.internal.verification.api.VerificationData;
+
 public class VerificationSucceededEvent {
     private final Object mock;
     private final VerificationMode mode;

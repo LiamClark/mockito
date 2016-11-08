@@ -1,6 +1,6 @@
 package org.mockitousage.debugging;
 
-import org.junit.Before;
+import org.assertj.core.api.Condition;
 import org.junit.Test;
 import org.mockito.exceptions.base.MockitoAssertionError;
 import org.mockito.internal.progress.MockingProgress;
@@ -9,8 +9,8 @@ import org.mockito.internal.verification.api.VerificationData;
 import org.mockito.listeners.VerificationListener;
 import org.mockito.verification.VerificationEvent;
 import org.mockito.verification.VerificationMode;
-import org.mockito.internal.verification.VerificationEventImpl;
 
+import java.lang.reflect.Method;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertNull;
@@ -18,51 +18,55 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.*;
 
 public class VerificationListenerCallBackTest {
-    public static final String invocationWanted = "doSomething";
-    private RememberingListener listener;
-    private MockingProgress mockingProgress;
-
-    @Before
-    public void setUp() {
-        listener = new RememberingListener();
-        mockingProgress = ThreadSafeMockingProgress.mockingProgress();
-        mockingProgress.addListener(listener);
-    }
 
     @Test
-    public void should_call_single_listener_on_verify() {
+    public void should_call_single_listener_on_verify() throws Exception {
         //given
+        RememberingListener listener = new RememberingListener();
+        MockingProgress mockingProgress = ThreadSafeMockingProgress.mockingProgress();
+        mockingProgress.addListener(listener);
+
         Foo foo = mock(Foo.class);
+        Method invocationWantedMethod = Foo.class.getDeclaredMethod("doSomething", String.class);
 
         //when
-        VerificationMode never = never();
-        verify(foo, never).doSomething("");
+        verify(foo, never()).doSomething("");
 
         //then
-        assertThatHasBeenNotified(listener, foo, never, invocationWanted);
+        assertThat(listener).is(notifiedFor(foo, never(), invocationWantedMethod));
     }
 
     @Test
-    public void should_call_all_listeners_on_verify() {
+    public void should_call_all_listeners_on_verify() throws Exception {
         //given
+        RememberingListener listener = new RememberingListener();
         RememberingListener listener2 = new RememberingListener();
+
+        MockingProgress mockingProgress = ThreadSafeMockingProgress.mockingProgress();
+        mockingProgress.addListener(listener);
         mockingProgress.addListener(listener2);
 
         Foo foo = mock(Foo.class);
+        Method invocationWantedMethod = Foo.class.getDeclaredMethod("doSomething", String.class);
 
         //when
-        VerificationMode never = never();
-        verify(foo, never).doSomething("");
+        verify(foo, never()).doSomething("");
 
         //then
-        assertThatHasBeenNotified(listener, foo, never, invocationWanted);
-        assertThatHasBeenNotified(listener2, foo, never, invocationWanted);
+        assertThat(listener).is(notifiedFor(foo, never(), invocationWantedMethod));
+        assertThat(listener2).is(notifiedFor(foo, never(), invocationWantedMethod));
     }
 
     @Test
     public void should_not_call_listener_when_verify_was_called_incorrectly() {
-        //when
+        //given
+        RememberingListener listener = new RememberingListener();
+        MockingProgress mockingProgress = ThreadSafeMockingProgress.mockingProgress();
+        mockingProgress.addListener(listener);
+
         Foo foo = null;
+
+        //when
         try {
             verify(foo).doSomething("");
             fail("Exception expected.");
@@ -73,8 +77,14 @@ public class VerificationListenerCallBackTest {
     }
 
     @Test
-    public void wrong_verification_type() {
+    public void should_notify_when_verification_throws_type_error() {
+        //given
+        RememberingListener listener = new RememberingListener();
+        MockingProgress mockingProgress = ThreadSafeMockingProgress.mockingProgress();
+        mockingProgress.addListener(listener);
+
         Foo foo = mock(Foo.class);
+
         //when
         try {
             verify(foo).doSomething("");
@@ -86,7 +96,11 @@ public class VerificationListenerCallBackTest {
     }
 
     @Test
-    public void verification_that_throws_runtime_exception() {
+    public void should_notify_when_verification_throws_runtime_exception() {
+        RememberingListener listener = new RememberingListener();
+        MockingProgress mockingProgress = ThreadSafeMockingProgress.mockingProgress();
+        mockingProgress.addListener(listener);
+
         Foo foo = mock(Foo.class);
         //when
         try {
@@ -98,14 +112,7 @@ public class VerificationListenerCallBackTest {
         }
     }
 
-    private void assertThatHasBeenNotified(RememberingListener listener, Object mock, VerificationMode mode, String invocationWanted) {
-        assertThat(listener.mock).isEqualTo(mock);
-        assertThat(listener.mode).isEqualTo(mode);
-        assertThat(listener.data.getWanted().getMethod().getName()).isEqualTo(invocationWanted);
-    }
-
-
-    private static class RememberingListener implements VerificationListener {
+    static class RememberingListener implements VerificationListener {
         Object mock;
         VerificationMode mode;
         VerificationData data;
@@ -118,9 +125,24 @@ public class VerificationListenerCallBackTest {
             this.data = verificationEvent.getData();
             this.cause = verificationEvent.getCause();
         }
+
+        public Method getWantedMethod() {
+            return data.getWanted().getInvocation().getMethod();
+        }
     }
 
-    public static class RuntimeExceptionVerificationMode implements VerificationMode{
+    static Condition<RememberingListener> notifiedFor(final Object mock, final VerificationMode mode, final Method wantedMethod) {
+        return new Condition<RememberingListener>() {
+            public boolean matches(RememberingListener toBeAsserted) {
+                assertThat(toBeAsserted.mock).isEqualTo(mock);
+                assertThat(toBeAsserted.mode).isEqualToComparingFieldByField(mode);
+                assertThat(toBeAsserted.getWantedMethod()).isEqualTo(wantedMethod);
+                return true;
+            }
+        };
+    }
+
+    static class RuntimeExceptionVerificationMode implements VerificationMode {
         @Override
         public void verify(VerificationData data) {
             throw new RuntimeException();
